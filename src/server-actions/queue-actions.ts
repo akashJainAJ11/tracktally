@@ -9,7 +9,7 @@ import { QueueItem, VoteResult } from '@/types';
 export async function addToQueue(youtubeUrl: string): Promise<QueueItem> {
 
     const session = await getServerSession(authOptions);
-    console.log("session: ", session);
+    // console.log("session: ", session);
 
     if (!session || !session.user) {
         throw new Error('You must be signed in to add to the queue');

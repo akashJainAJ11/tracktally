@@ -10,14 +10,24 @@ export default function Dashboard() {
     const { data: session, status } = useSession();
     const [queue, setQueue] = useState<QueueItemType[]>([]);
     const [currentVideo, setCurrentVideo] = useState<QueueItemType | null>(null);
+    const [isRequestPending, setIsRequestPending] = useState(false);
 
     const fetchQueueAndVideo = async () => {
-        const queueData = await getQueue();
-        setQueue(queueData);
+        if (isRequestPending) return;
+        setIsRequestPending(true);
 
-        if (!currentVideo) {
-            const highestUpvotedVideo = await getHighestUpvotedVideo();
-            setCurrentVideo(highestUpvotedVideo);
+        try {
+            const queueData = await getQueue();
+            setQueue(queueData);
+
+            if (!currentVideo) {
+                const highestUpvotedVideo = await getHighestUpvotedVideo();
+                setCurrentVideo(highestUpvotedVideo);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setIsRequestPending(false);  // Unlock requests after completion
         }
     };
 
