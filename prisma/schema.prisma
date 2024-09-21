@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  name       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  queueItems Queue[]
+  votes      Vote[]
+}
+
+model Queue {
+  id           Int      @id @default(autoincrement())
+  youtubeUrl   String   @map("youtube_url")
+  title        String?
+  thumbnailUrl String?  @map("thumbnail_url")
+  addedById    Int      @map("added_by")
+  addedBy      User     @relation(fields: [addedById], references: [id])
+  upvotes      Int      @default(0)
+  downvotes    Int      @default(0)
+  addedAt      DateTime @default(now()) @map("added_at")
+  votes        Vote[]
+}
+
+model Vote {
+  id       Int     @id @default(autoincrement())
+  user     User    @relation(fields: [userId], references: [id])
+  userId   Int     @map("user_id")
+  queue    Queue   @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  queueId  Int     @map("queue_id")
+  voteType Boolean @map("vote_type")
+
+  @@unique([userId, queueId])
+}
