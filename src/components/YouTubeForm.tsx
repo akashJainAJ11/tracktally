@@ -1,3 +1,4 @@
+"use client"
 import React, { useState } from 'react';
 import { addToQueue } from '@/server-actions/queue-actions';
 import { QueueItem } from '@/types';
