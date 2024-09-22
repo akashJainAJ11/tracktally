@@ -1,53 +1,47 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import YouTubeForm from './YouTubeForm';
 import QueueItem from './QueueItem';
 import { getQueue, getHighestUpvotedVideo, removeVideoFromQueue } from '@/server-actions/queue-actions';
 import { QueueItem as QueueItemType } from '@/types';
 import YouTube from 'react-youtube';
+import useSWR from 'swr';
+
+
+const fetchQueueData = async () => {
+    return await getQueue();
+};
+
+const fetchHighestUpvotedVideo = async () => {
+    return await getHighestUpvotedVideo();
+};
 
 export default function Dashboard() {
     const { data: session, status } = useSession();
-    const [queue, setQueue] = useState<QueueItemType[]>([]);
     const [currentVideo, setCurrentVideo] = useState<QueueItemType | null>(null);
-    const [isRequestPending, setIsRequestPending] = useState(false);
 
-    const fetchQueueAndVideo = useCallback(async () => {
-        if (isRequestPending) return;
-        setIsRequestPending(true);
 
-        try {
-            const queueData = await getQueue();
-            setQueue(queueData);
+    const { data: queue, mutate: mutateQueue } = useSWR('queue', fetchQueueData, {
+        refreshInterval: 5000,
+    });
 
-            if (!currentVideo) {
-                const highestUpvotedVideo = await getHighestUpvotedVideo();
-                setCurrentVideo(highestUpvotedVideo);
-            }
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        } finally {
-            setIsRequestPending(false);
+
+    const { data: highestUpvotedVideo, mutate: mutateVideo } = useSWR('highestUpvotedVideo', fetchHighestUpvotedVideo);
+
+
+    React.useEffect(() => {
+        if (!currentVideo && highestUpvotedVideo) {
+            setCurrentVideo(highestUpvotedVideo);
         }
-    }, [isRequestPending, currentVideo]);
-
-    useEffect(() => {
-        if (status === "authenticated") {
-            fetchQueueAndVideo();
-            const interval = setInterval(fetchQueueAndVideo, 5000);
-            return () => clearInterval(interval);
-        }
-    }, [status, fetchQueueAndVideo]);
-
+    }, [highestUpvotedVideo, currentVideo]);
 
     const handleVideoEnd = async () => {
         if (currentVideo) {
             await removeVideoFromQueue(currentVideo.id);
+            await mutateQueue();
+            await mutateVideo();
         }
-        const nextVideo = await getHighestUpvotedVideo();
-        setCurrentVideo(nextVideo);
-        fetchQueueAndVideo();
     };
 
     if (status === "loading") {
@@ -87,18 +81,21 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <YouTubeForm onAdd={(newItem: QueueItemType) => setQueue([...queue, newItem])} />
+
+            <YouTubeForm onAdd={async () => {
+                await mutateQueue();
+            }} />
+
             <div>
                 <h2 className="text-xl sm:text-2xl mt-6 mb-2">Queue</h2>
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-                    {queue.map((item) => (
+                    {queue?.map((item) => (
                         <QueueItem
                             key={item.id}
                             item={item}
-                            onVote={(newVotes) => {
-                                setQueue(queue.map(qItem =>
-                                    qItem.id === item.id ? { ...qItem, ...newVotes } : qItem
-                                ));
+
+                            onVote={async () => {
+                                await mutateQueue();
                             }}
                         />
                     ))}
