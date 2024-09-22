@@ -1,4 +1,3 @@
-"use client";
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import YouTubeForm from './YouTubeForm';
@@ -7,28 +6,39 @@ import { getQueue, getHighestUpvotedVideo, removeVideoFromQueue } from '@/server
 import { QueueItem as QueueItemType } from '@/types';
 import YouTube from 'react-youtube';
 import useSWR from 'swr';
-
+import { toast } from 'react-toastify';
 
 const fetchQueueData = async () => {
-    return await getQueue();
+    try {
+        return await getQueue();
+    } catch (error) {
+        console.error('Error fetching queue:', error);
+        toast.error('Failed to fetch queue. Please try again.');
+        throw error;
+    }
 };
 
 const fetchHighestUpvotedVideo = async () => {
-    return await getHighestUpvotedVideo();
+    try {
+        return await getHighestUpvotedVideo();
+    } catch (error) {
+        console.error('Error fetching highest upvoted video:', error);
+        toast.error('Failed to fetch current video. Please try again.');
+        throw error;
+    }
 };
 
 export default function Dashboard() {
     const { data: session, status } = useSession();
     const [currentVideo, setCurrentVideo] = useState<QueueItemType | null>(null);
-
-
-    const { data: queue, mutate: mutateQueue } = useSWR('queue', fetchQueueData, {
+    const { data: queue, error: queueError, mutate: mutateQueue } = useSWR('queue', fetchQueueData, {
         refreshInterval: 5000,
+        onError: (error) => {
+            console.error('SWR error fetching queue:', error);
+            toast.error('Error refreshing queue. Please check your connection.');
+        }
     });
-
-
-    const { data: highestUpvotedVideo, mutate: mutateVideo } = useSWR('highestUpvotedVideo', fetchHighestUpvotedVideo);
-
+    const { data: highestUpvotedVideo, error: videoError, mutate: mutateVideo } = useSWR('highestUpvotedVideo', fetchHighestUpvotedVideo);
 
     React.useEffect(() => {
         if (!currentVideo && highestUpvotedVideo) {
@@ -38,9 +48,14 @@ export default function Dashboard() {
 
     const handleVideoEnd = async () => {
         if (currentVideo) {
-            await removeVideoFromQueue(currentVideo.id);
-            await mutateQueue();
-            await mutateVideo();
+            try {
+                await removeVideoFromQueue(currentVideo.id);
+                await mutateQueue();
+                await mutateVideo();
+            } catch (error) {
+                console.error('Error removing video from queue:', error);
+                toast.error('Failed to remove video from queue. Please try again.');
+            }
         }
     };
 
@@ -59,6 +74,10 @@ export default function Dashboard() {
             autoplay: 1,
         },
     };
+
+    if (queueError || videoError) {
+        return <div className="flex items-center justify-center h-screen text-white">Error loading data. Please try again later.</div>;
+    }
 
     return (
         <div className="bg-gray-900 text-white min-h-screen p-4">
@@ -80,12 +99,14 @@ export default function Dashboard() {
                     )}
                 </div>
             </div>
-
-
             <YouTubeForm onAdd={async () => {
-                await mutateQueue();
+                try {
+                    await mutateQueue();
+                } catch (error) {
+                    console.error('Error adding to queue:', error);
+                    toast.error('Failed to add video to queue. Please try again.');
+                }
             }} />
-
             <div>
                 <h2 className="text-xl sm:text-2xl mt-6 mb-2">Queue</h2>
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">
@@ -93,9 +114,13 @@ export default function Dashboard() {
                         <QueueItem
                             key={item.id}
                             item={item}
-
                             onVote={async () => {
-                                await mutateQueue();
+                                try {
+                                    await mutateQueue();
+                                } catch (error) {
+                                    console.error('Error updating vote:', error);
+                                    toast.error('Failed to update vote. Please try again.');
+                                }
                             }}
                         />
                     ))}
