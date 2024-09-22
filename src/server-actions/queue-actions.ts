@@ -1,5 +1,5 @@
 'use server'
-
+import { unstable_noStore as noStore } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/route';
 import prisma from '@/lib/db';
@@ -7,10 +7,8 @@ import { getVideoInfo } from '@/lib/youtube';
 import { QueueItem, VoteResult } from '@/types';
 
 export async function addToQueue(youtubeUrl: string): Promise<QueueItem> {
-
+    noStore();
     const session = await getServerSession(authOptions);
-    // console.log("session: ", session);
-
     if (!session || !session.user) {
         throw new Error('You must be signed in to add to the queue');
     }
@@ -38,7 +36,9 @@ export async function addToQueue(youtubeUrl: string): Promise<QueueItem> {
     });
 }
 
+
 export async function vote(queueId: number, voteType: boolean): Promise<VoteResult> {
+    noStore();
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
         throw new Error('You must be signed in to vote');
@@ -99,6 +99,7 @@ export async function vote(queueId: number, voteType: boolean): Promise<VoteResu
 }
 
 export async function getQueue(): Promise<QueueItem[]> {
+    noStore();
     return prisma.queue.findMany({
         orderBy: [
             { upvotes: 'desc' },
@@ -116,6 +117,7 @@ export async function getQueue(): Promise<QueueItem[]> {
 }
 
 export async function getHighestUpvotedVideo(): Promise<QueueItem | null> {
+    noStore();
     return prisma.queue.findFirst({
         orderBy: [
             { upvotes: 'desc' },
@@ -133,6 +135,7 @@ export async function getHighestUpvotedVideo(): Promise<QueueItem | null> {
 }
 
 export async function removeVideoFromQueue(id: number): Promise<void> {
+    noStore();
     await prisma.queue.delete({
         where: { id },
     });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import YouTubeForm from './YouTubeForm';
 import QueueItem from './QueueItem';
@@ -12,7 +12,7 @@ export default function Dashboard() {
     const [currentVideo, setCurrentVideo] = useState<QueueItemType | null>(null);
     const [isRequestPending, setIsRequestPending] = useState(false);
 
-    const fetchQueueAndVideo = async () => {
+    const fetchQueueAndVideo = useCallback(async () => {
         if (isRequestPending) return;
         setIsRequestPending(true);
 
@@ -27,9 +27,9 @@ export default function Dashboard() {
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
-            setIsRequestPending(false);  // Unlock requests after completion
+            setIsRequestPending(false);
         }
-    };
+    }, [isRequestPending, currentVideo]);
 
     useEffect(() => {
         if (status === "authenticated") {
@@ -37,7 +37,8 @@ export default function Dashboard() {
             const interval = setInterval(fetchQueueAndVideo, 5000);
             return () => clearInterval(interval);
         }
-    }, [status]);
+    }, [status, fetchQueueAndVideo]);
+
 
     const handleVideoEnd = async () => {
         if (currentVideo) {

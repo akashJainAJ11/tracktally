@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { vote } from '@/server-actions/queue-actions';
 import { QueueItem as QueueItemType, VoteResult } from '@/types';
 
@@ -20,7 +21,15 @@ export default function QueueItem({ item, onVote }: QueueItemProps) {
     return (
         <div className="bg-gray-800 p-4 rounded-md flex flex-col sm:flex-row items-center sm:items-start sm:justify-between">
             <div className="flex flex-col sm:flex-row items-center sm:items-start mb-4 sm:mb-0">
-                <img src={item.thumbnailUrl || undefined} alt={item.title || 'Video thumbnail'} className="w-full sm:w-24 h-auto sm:h-16 rounded-md mb-2 sm:mb-0 sm:mr-4" />
+                <div className="w-full sm:w-24 h-auto sm:h-16 relative mb-2 sm:mb-0 sm:mr-4">
+                    <Image
+                        src={item.thumbnailUrl || '/placeholder-image.jpg'}
+                        alt={item.title || 'Video thumbnail'}
+                        layout="fill"
+                        objectFit="cover"
+                        className="rounded-md"
+                    />
+                </div>
                 <div className="text-center sm:text-left">
                     <h3 className="text-lg sm:text-xl">{item.title}</h3>
                     <p className="text-gray-400">Added by: {item.addedBy.name}</p>
