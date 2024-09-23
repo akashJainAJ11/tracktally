@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { vote } from '@/server-actions/queue-actions';
 import { QueueItem as QueueItemType, VoteResult } from '@/types';
@@ -9,12 +9,17 @@ interface QueueItemProps {
 }
 
 export default function QueueItem({ item, onVote }: QueueItemProps) {
+    const [isVoting, setIsVoting] = useState(false);
+
     const handleVote = async (voteType: boolean) => {
+        setIsVoting(true);
         try {
             const newVotes = await vote(item.id, voteType);
             onVote(newVotes);
         } catch (error) {
             console.error('Error voting:', error);
+        } finally {
+            setIsVoting(false);
         }
     };
 
@@ -36,8 +41,20 @@ export default function QueueItem({ item, onVote }: QueueItemProps) {
                 </div>
             </div>
             <div className="flex">
-                <button onClick={() => handleVote(true)} className="bg-green-500 text-white px-3 py-1 rounded mr-2">Upvote ({item.upvotes})</button>
-                <button onClick={() => handleVote(false)} className="bg-red-500 text-white px-3 py-1 rounded">Downvote ({item.downvotes})</button>
+                <button
+                    onClick={() => handleVote(true)}
+                    className="bg-green-500 text-white px-3 py-1 rounded mr-2 disabled:opacity-50"
+                    disabled={isVoting}
+                >
+                    Upvote ({item.upvotes})
+                </button>
+                <button
+                    onClick={() => handleVote(false)}
+                    className="bg-red-500 text-white px-3 py-1 rounded disabled:opacity-50"
+                    disabled={isVoting}
+                >
+                    Downvote ({item.downvotes})
+                </button>
             </div>
         </div>
     );
