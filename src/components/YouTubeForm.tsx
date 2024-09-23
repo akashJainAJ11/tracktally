@@ -1,37 +1,48 @@
-"use client"
 import React, { useState } from 'react';
 import { addToQueue } from '@/server-actions/queue-actions';
-import { QueueItem } from '@/types';
+import { toast } from 'react-toastify';
 
-interface YouTubeFormProps {
-    onAdd: (newItem: QueueItem) => void;
-}
-
-export default function YouTubeForm({ onAdd }: YouTubeFormProps) {
+export default function YouTubeForm({ onAdd }: { onAdd: () => void }) {
     const [url, setUrl] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
-            const newItem = await addToQueue(url);
-            onAdd(newItem);
+            await addToQueue(url);
             setUrl('');
+            onAdd();
+            toast.success('Video added to queue successfully!');
         } catch (error) {
-            console.error('Error adding to queue:', error);
+            console.error('Error adding video to queue:', error);
+            if (error instanceof Error) {
+                toast.error(error.message || 'Failed to add video to queue. Please try again.');
+            } else {
+                toast.error('An unexpected error occurred. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center mb-6">
+        <form onSubmit={handleSubmit} className="mb-4">
             <input
                 type="text"
                 value={url}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value)}
+                onChange={(e) => setUrl(e.target.value)}
                 placeholder="Enter YouTube URL"
+                className="w-full p-2 rounded bg-gray-700 text-white mb-2"
                 required
-                className="flex-grow w-full sm:w-auto p-2 rounded-md mb-2 sm:mb-0 sm:mr-2 bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring focus:ring-blue-500"
             />
-            <button type="submit" className="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded">Add to Queue</button>
+            <button
+                type="submit"
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+                disabled={isLoading}
+            >
+                {isLoading ? 'Adding...' : 'Add to Queue'}
+            </button>
         </form>
     );
 }
