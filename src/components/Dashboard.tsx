@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import YouTubeForm from './YouTubeForm';
 import QueueItem from './QueueItem';
@@ -40,7 +40,7 @@ export default function Dashboard() {
     });
     const { data: highestUpvotedVideo, error: videoError, mutate: mutateVideo } = useSWR('highestUpvotedVideo', fetchHighestUpvotedVideo);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!currentVideo && highestUpvotedVideo) {
             setCurrentVideo(highestUpvotedVideo);
         }
@@ -52,6 +52,13 @@ export default function Dashboard() {
                 await removeVideoFromQueue(currentVideo.id);
                 await mutateQueue();
                 await mutateVideo();
+
+                // Automatically play the next video
+                if (queue && queue.length > 0) {
+                    setCurrentVideo(queue[0]);
+                } else {
+                    setCurrentVideo(null);
+                }
             } catch (error) {
                 console.error('Error removing video from queue:', error);
                 toast.error('Failed to remove video from queue. Please try again.');
@@ -89,7 +96,7 @@ export default function Dashboard() {
                         <YouTube
                             videoId={currentVideo.youtubeUrl.split('v=')[1]}
                             opts={opts}
-                            onEnd={handleVideoEnd}
+                            onEnd={handleVideoEnd}  // Automatically call the next video when the current one ends
                             className="absolute w-full h-full"
                         />
                     ) : (
@@ -102,6 +109,9 @@ export default function Dashboard() {
             <YouTubeForm onAdd={async () => {
                 try {
                     await mutateQueue();
+                    if (!currentVideo) {
+                        await mutateVideo();
+                    }
                 } catch (error) {
                     console.error('Error adding to queue:', error);
                     toast.error('Failed to add video to queue. Please try again.');
